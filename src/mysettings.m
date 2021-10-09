@@ -145,6 +145,9 @@ simdata.sigma_initial_gyro_scale=0.00001*ones(3,1);     % Gyroscope scale factor
 simdata.acc_bias_instability_time_constant_filter=inf;
 simdata.gyro_bias_instability_time_constant_filter=inf;
 
+% Position update
+simdata.R_pos = eye(3);
+
 end
 
 

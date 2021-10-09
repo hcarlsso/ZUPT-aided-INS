@@ -36,7 +36,8 @@ disp('Runs the zero velocity detector')
 
 %% Run the Kalman filter
 disp('Runs the filter')
-[x_h,cov_h]=ZUPTaidedINS(u,zupt, simdata);
+posupt = nan(3, size(u,2));
+[x_h,cov_h]=ZUPTaidedINS(u,zupt, posupt, simdata);
 
 %% View the result 
 disp('Views the data')

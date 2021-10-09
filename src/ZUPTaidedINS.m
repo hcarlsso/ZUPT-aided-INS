@@ -36,7 +36,7 @@
 %>
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [x_h, cov_h]=ZUPTaidedINS(u,zupt, simdata)
+function [x_h, cov_h]=ZUPTaidedINS(u,zupt, posupt, simdata)
 
 
 
@@ -51,6 +51,12 @@ N=length(u);
 % covariance matrix Q, the pseudo measurement noise covariance R, and the
 % observation matrix H.
 [P, Q, R, H]=init_filter(simdata);          % Subfunction located further down in the file.
+
+% Position updates
+H_pos = zeros(size(H));
+H_pos(1:3,1:3) = eye(3);
+R_pos = simdata.R_pos;
+assert(all(size(R_pos) == [3,3]))
 
 % Allocate vecors
 [x_h, cov_h, Id]=init_vec(N,P,simdata);     % Subfunction located further down in the file.
@@ -105,7 +111,7 @@ for k=2:N
         
         % Calculate the prediction error. Since the detector hypothesis 
         % is that the platform has zero velocity, the prediction error is 
-        % equal to zero minu the estimated velocity.    
+        % equal to zero minus the estimated velocity.    
         z=-x_h(4:6,k);   
         
         % Estimation of the perturbations in the estimated navigation
@@ -120,6 +126,40 @@ for k=2:N
         
         % Update the filter state covariance matrix P.
         P=(Id-K*H)*P;
+        
+        % Make sure the filter state covariance matrix is symmetric. 
+        P=(P+P')/2;
+    
+        % Store the diagonal of the state covariance matrix P.
+        cov_h(:,k)=diag(P);
+    end
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %      Position update      %
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    % Check if a zero velocity update should be done. If so, do the
+    % following
+    if all(~isnan(posupt(:,k)))
+        
+        % Calculate the Kalman filter gain
+        K=(P*H_pos')/(H_pos*P*H_pos' + R_pos);
+        
+        % Calculate the prediction error. 
+        z = posupt(:,k) - x_h(1:3,k);   
+        
+        % Estimation of the perturbations in the estimated navigation
+        % states
+        dx=K*z;
+        
+        
+        % Correct the navigation state using the estimated perturbations. 
+        % (Subfunction located further down in the file.)
+        [x_h(:,k), quat]=comp_internal_states(x_h(:,k),dx,quat);     % Subfunction located further down in the file.
+    
+        
+        % Update the filter state covariance matrix P.
+        P=(Id-K*H_pos)*P;
         
         % Make sure the filter state covariance matrix is symmetric. 
         P=(P+P')/2;
